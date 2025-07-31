@@ -77,46 +77,76 @@ invaderOpen.src = "gimp_alien_open.png";
 ctx.drawImage(invader, 0, 0);
 ctx.drawImage(invaderOpen, 0, 0);
 
-function drawSwarm(swarm: Sprite[][], cnv: CanvasRenderingContext2D, drawx: number = 0){
-    let drawy: number = 0;
-    for(let i = 0; i < swarm.length; i++){
-        for(let j = 0; j < swarm[i].length; j++){
-            // swarm[i][j].img.onload = () =>
-            // {cnv.drawImage(swarm[i][j].img, drawx, drawy)};
-            cnv.drawImage(swarm[i][j].img, drawx, drawy)
-            drawx +=150;
+class Screen {
+    swarm: Sprite[][];
+    pc: Sprite;
+    cnv: CanvasRenderingContext2D
+
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite){
+        this.swarm = swarm; 
+        this.cnv = cnv;
+        this.pc = pc;
+    }
+
+    drawSwarm(drawCoord: CoordSpeed = {x:10, y: 0}, offSet: number = 300) : void{
+    let origin: number = drawCoord.x
+    let x = drawCoord.x;
+    let y = drawCoord.y
+    for(let i = 0; i < this.swarm.length; i++){
+        x = origin;
+        for(let j = 0; j < this.swarm[i].length; j++){
+            this.cnv.drawImage(this.swarm[i][j].img, x, y)
+            x +=offSet;
         }
-        drawy += 150;
-        drawx -= 300;
+        y += 150;
     }
 }
+}
+// function drawSwarm(swarm: Sprite[][], cnv: CanvasRenderingContext2D, drawx: number = 10, offSet: number = 300) : void{
+//     let drawy: number = 0;
+//     let origin: number = drawx
+//     for(let i = 0; i < swarm.length; i++){
+//         drawx = origin;
+//         for(let j = 0; j < swarm[i].length; j++){
+//             cnv.drawImage(swarm[i][j].img, drawx, drawy)
+//             drawx +=offSet;
+//         }
+//         drawy += 150;
+//     }
+// }
 const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png",0,{x:0, y:0});
 const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png",0,{x:0, y:0});
-const invaders: Alien[][] = [[openInvader, closedInvader],[openInvader, closedInvader]];
-let startPoint: number = 10
+const tank = new Alien({x:0, y:0},"tank_big.png",0,{x:0, y:0});
+const closedSwarm: Alien[]= Array.from({length: 6}, () => (closedInvader));
+const openSwarm: Alien[]= Array.from({length: 6}, () => (openInvader));
+const invaderSwarm: Alien[][] = [closedSwarm, openSwarm];
+
+let startPoint: CoordSpeed = {x: 10, y: 0}
 let startY: number = 0
-let startCounter: number = 0
+let gameTimer: number = 0
 const blinkEnd: number = 100;
 const blinkStart: number = 10;
 const blinkDur: number = blinkEnd + blinkStart
-let offSet = 200
+let setOff = 100
+const gameScreen = new Screen(invaderSwarm, ctx, tank);
+
 function loop() :void {
     ctx.fillRect(0,0, canvas.width, canvas.height);
-    //drawSwarm(invaders, ctx, startPoint);
-      if(startCounter >= 5 && startCounter <= blinkStart + blinkDur){
-        drawSwarm(invaders, ctx, startPoint)
-        startCounter += 1;
-      }else if (startCounter > blinkStart + blinkDur){
-        startPoint += offSet;
-        startCounter = 0
+      if(gameTimer >= 5 && (gameTimer <= blinkStart + blinkDur)){
+        //drawSwarm(invaderSwarm, ctx, startPoint.x);
+        gameScreen.drawSwarm(startPoint)
+        gameTimer += 1;
+      }else if (gameTimer > (blinkStart + blinkDur)){
+        startPoint.x += setOff;
+        gameTimer = 0
       }
-if(startPoint + (2* offSet) >= canvas.width || startPoint + (2* offSet) <= 0){
-       drawSwarm(invaders, ctx, startPoint);
-        //ctx.fillRect(0,0, canvas.width, canvas.height);
-    //startPoint = 0
-    offSet = offSet * -1;
+if(startPoint.x + (invaderSwarm[0].length * setOff *3) >= canvas.width || startPoint.x + (invaderSwarm[0].length * setOff * 0.5) <= 0){
+    //drawSwarm(invaderSwarm, ctx, startPoint);
+    setOff = setOff * -1;
     }
-    startCounter +=1;
+    
+    
+    gameTimer +=1;
     requestAnimationFrame(loop);
 }
 loop();
