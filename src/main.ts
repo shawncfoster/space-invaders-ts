@@ -80,27 +80,60 @@ ctx.drawImage(invaderOpen, 0, 0);
 class Screen {
     swarm: Sprite[][];
     pc: Sprite;
+    swarmTimer: number
     cnv: CanvasRenderingContext2D
-
-    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite){
+    startPoint: CoordSpeed;
+    offSet: number;
+    //good place to use destructuring?
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite, 
+        startPoint: CoordSpeed = {x:0, y:0}, offSet: number = 300
+    ){
         this.swarm = swarm; 
         this.cnv = cnv;
         this.pc = pc;
+        this.swarmTimer = 0;
+        this.startPoint = startPoint;
+        this.offSet = offSet;
     }
 
-    drawSwarm(drawCoord: CoordSpeed = {x:10, y: 0}, offSet: number = 300) : void{
-    let origin: number = drawCoord.x
-    let x = drawCoord.x;
-    let y = drawCoord.y
-    for(let i = 0; i < this.swarm.length; i++){
-        x = origin;
-        for(let j = 0; j < this.swarm[i].length; j++){
-            this.cnv.drawImage(this.swarm[i][j].img, x, y)
-            x +=offSet;
+    drawSwarm(blinkStart= 5, blinkDur= 100){
+    let {x, y} = this.startPoint;
+    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+            for(let i = 0; i < this.swarm.length; i++){
+                x = this.startPoint.x;
+                for(let j = 0; j < this.swarm[i].length; j++){
+                    this.cnv.drawImage(this.swarm[i][j].img, x, y);
+                    x += this.offSet;
+                    if(x >= (canvas.width - this.offSet) || x < (- this.offSet + 0)){
+                        this.offSet *= -1; //may lead to being drawn in the wrong direction
+                        console.log(this.startPoint.x);
+                        this.startPoint.x = x;
+                }
+            }
+                y += 150;
         }
-        y += 150;
+    this.swarmTimer += 1;
+    }else if(this.swarmTimer > (blinkStart + blinkDur)){
+        this.swarmTimer = 0;
+        this.startPoint.x +=this.offSet
     }
+    this.swarmTimer += 1
 }
+    timeSwarm(blinkStart: number = 5, blinkDur: number = 100): void{
+        if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+        //drawSwarm(invaderSwarm, ctx, startPoint.x);
+        gameScreen.drawSwarm()
+        gameTimer += 1;
+      }else if (this.swarmTimer > (blinkStart + blinkDur)){
+        startPoint.x += setOff;
+        gameTimer = 0
+      }
+    if(startPoint.x + (this.swarm[0].length * setOff *3) >= canvas.width || startPoint.x + 
+    (this.swarm[0].length * setOff * 0.5) <= 0){
+    //drawSwarm(invaderSwarm, ctx, startPoint);
+    setOff = setOff * -1;
+    }
+    }
 }
 // function drawSwarm(swarm: Sprite[][], cnv: CanvasRenderingContext2D, drawx: number = 10, offSet: number = 300) : void{
 //     let drawy: number = 0;
@@ -132,19 +165,19 @@ const gameScreen = new Screen(invaderSwarm, ctx, tank);
 
 function loop() :void {
     ctx.fillRect(0,0, canvas.width, canvas.height);
-      if(gameTimer >= 5 && (gameTimer <= blinkStart + blinkDur)){
-        //drawSwarm(invaderSwarm, ctx, startPoint.x);
-        gameScreen.drawSwarm(startPoint)
-        gameTimer += 1;
-      }else if (gameTimer > (blinkStart + blinkDur)){
-        startPoint.x += setOff;
-        gameTimer = 0
-      }
-if(startPoint.x + (invaderSwarm[0].length * setOff *3) >= canvas.width || startPoint.x + (invaderSwarm[0].length * setOff * 0.5) <= 0){
-    //drawSwarm(invaderSwarm, ctx, startPoint);
-    setOff = setOff * -1;
-    }
-    
+//       if(gameTimer >= 5 && (gameTimer <= blinkStart + blinkDur)){
+//         //drawSwarm(invaderSwarm, ctx, startPoint.x);
+//         gameScreen.drawSwarm(startPoint)
+//         gameTimer += 1;
+//       }else if (gameTimer > (blinkStart + blinkDur)){
+//         startPoint.x += setOff;
+//         gameTimer = 0
+//       }
+// if(startPoint.x + (invaderSwarm[0].length * setOff *3) >= canvas.width || startPoint.x + (invaderSwarm[0].length * setOff * 0.5) <= 0){
+//     //drawSwarm(invaderSwarm, ctx, startPoint);
+//     setOff = setOff * -1;
+//     }
+    gameScreen.drawSwarm();
     
     gameTimer +=1;
     requestAnimationFrame(loop);
