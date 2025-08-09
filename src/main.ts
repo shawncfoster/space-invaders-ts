@@ -18,7 +18,7 @@ const setUpFeatures: Features = {
     squareHeight: 50,
     ncol: 30,
     nrow: 30,
-    width: 4500,
+    width: 4800,
     height: 2000,
     bgColor: "black"
 }
@@ -38,7 +38,8 @@ class Sprite{
     status: Status;
 
     constructor(loc: CoordSpeed, imgSource: string, 
-        imgList: imageList = {images:[], deadSprite:"", cycle: 0}, status: Status = "alive"){
+        imgList: imageList = {images:[], deadSprite:"", cycle: 0},
+        status: Status = "alive"){
         this.loc = loc;
         this.imgSource = imgSource;
         this.img = new Image();
@@ -74,9 +75,68 @@ class Alien extends Sprite{
         this.img.src = imgSource;
         this.imgList = imgList;
     }
+}
+
+class PlayerCharacter extends Sprite{
+    constructor(loc: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
+        super(loc, imgSource);
+        this.img = new Image();
+        this.img.src = imgSource;
+        this.imgList = imgList;
+    }
+
+    shoot(){
+        
+    }
 
 }
 
+class Screen {
+    swarm: Sprite[][];
+    pc: PlayerCharacter;
+    swarmTimer: number
+    cnv: CanvasRenderingContext2D
+    startPoint: CoordSpeed;
+    setUp: Features;
+    offSet: CoordSpeed;
+    //good place to use destructuring?
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, 
+        startPoint: CoordSpeed = {x:0, y:0}, offSet: CoordSpeed = {x:200, y:0}, setUp:Features = setUpFeatures
+    ){
+        this.swarm = swarm; 
+        this.cnv = cnv;
+        this.pc = pc;
+        this.swarmTimer = 0;
+        this.startPoint = startPoint;
+        this.offSet = offSet;
+        this.setUp = setUp;
+    }
+
+    drawSwarm(blinkStart= 5, blinkDur= 50, speed = 1){
+    let {x, y} = this.startPoint;
+    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+            for(let i = 0; i < this.swarm.length; i++){
+                x = this.startPoint.x;
+                for(let j = 0; j < this.swarm[i].length; j++){
+                    this.cnv.drawImage(this.swarm[i][j].img, x, y);
+                    x += this.offSet.x;
+                    if(x >= (canvas.width - (this.offSet.x)) || x <= (- this.offSet.x)){
+                        this.startPoint.y += 100
+                        this.offSet.x *= -1;
+                        this.startPoint.x = x + this.offSet.x;
+                }
+            }
+                y += 150;
+        }
+    //this.startPoint.y +=150;    
+    this.swarmTimer += 1;
+    }else if(this.swarmTimer > (blinkStart + blinkDur)){
+        this.swarmTimer = 0;
+        this.startPoint.x += this.offSet.x * speed
+    }
+    this.swarmTimer += 1
+}
+}
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;; 
 const ctx  = canvas.getContext("2d") as CanvasRenderingContext2D;
 
@@ -91,86 +151,39 @@ const invaderOpen = new Image();
 invader.src = "gimp_alien_thick.png";
 invaderOpen.src = "gimp_alien_open.png";
 
-class Screen {
-    swarm: Sprite[][];
-    pc: Sprite;
-    swarmTimer: number
-    cnv: CanvasRenderingContext2D
-    startPoint: CoordSpeed;
-    offSet: CoordSpeed;
-    //good place to use destructuring?
-    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite, 
-        startPoint: CoordSpeed = {x:0, y:0}, offSet: CoordSpeed = {x:200, y:0}
-    ){
-        this.swarm = swarm; 
-        this.cnv = cnv;
-        this.pc = pc;
-        this.swarmTimer = 0;
-        this.startPoint = startPoint;
-        this.offSet = offSet;
-    }
-//     drawSwarm2(blinkStart= 5, blinkDur= 100){
-//     let {x, y} = this.startPoint;
-//     if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-//             for(let i = 0; i < this.swarm.length; i++){
-//                 x = this.startPoint.x;
-//                 for(let j = 0; j < this.swarm[i].length; j++){
-//                     const newCoords:CoordSpeed = {x: this.swarm[i][j].loc.x + this.offSet.x, y: this.swarm[i][j].loc.x};
-//                     //this.swarm[i][j].move();
-//                     this.cnv.drawImage(this.swarm[i][j].img, x, y);
-//                     x += this.offSet.x;
-//                     if(x >= (canvas.width - this.offSet.x) || x < (- this.offSet + 0)){
-//                         this.offSet.x *= -1; //may lead to being drawn in the wrong direction
-//                         console.log(this.startPoint.x);
-//                         this.startPoint.x = x;
-//                 }
-//             }
-//                 y += 150;
-//         }
-//     this.swarmTimer += 1;
-//     }else if(this.swarmTimer > (blinkStart + blinkDur)){
-//         this.swarmTimer = 0;
-//         this.startPoint.x +=this.offSet.x
-//     }
-//     this.swarmTimer += 1
-// }
-    drawSwarm(blinkStart= 5, blinkDur= 50, speed = 1){
-    let {x, y} = this.startPoint;
-    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-            for(let i = 0; i < this.swarm.length; i++){
-                x = this.startPoint.x;
-                for(let j = 0; j < this.swarm[i].length; j++){
-                    this.cnv.drawImage(this.swarm[i][j].img, x, y);
-                    x += this.offSet.x;
-                    if(x >= (canvas.width - (this.offSet.x)) || x < (- this.offSet.x + 0)){
-                        this.offSet.x *= -1;
-                        console.log(this.startPoint.x);
-                        this.startPoint.x = x;
-                }
-            }
-                y += 150;
-        }
-    this.swarmTimer += 1;
-    }else if(this.swarmTimer > (blinkStart + blinkDur)){
-        this.swarmTimer = 0;
-        this.startPoint.x +=this.offSet.x * speed
-    }
-    this.swarmTimer += 1
-}
-}
-
 const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png");
 const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
-const tank = new Alien({x:0, y:0},"tank_big.png");
+const tank = new PlayerCharacter({x: 1, y:canvas.height - 120},"tank_big.png");
 const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
 const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
 const invaderSwarm: Alien[][] = [closedSwarm, openSwarm];
 
 const gameScreen = new Screen(invaderSwarm, ctx, tank);
 
+//yes, global, bad. can't make it work inside the thing
+    window.addEventListener("keydown", (e) => {
+            switch (e.key) {
+              case "a":
+                    if(gameScreen.pc.loc.x > 100){
+                        gameScreen.pc.move({x:gameScreen.pc.loc.x - 100, y:gameScreen.pc.loc.y});
+                    }
+                    break;
+              case "d":
+                    if(gameScreen.pc.loc.x < canvas.width - 100){
+                        gameScreen.pc.move({x:gameScreen.pc.loc.x + 100, y: gameScreen.pc.loc.y});
+                    }
+                break;
+            case "Space":
+                gameScreen.pc.shoot();
+                break;
+                
+            }
+        })
+
 function loop() :void {
     ctx.fillRect(0,0, canvas.width, canvas.height);
     gameScreen.drawSwarm();
+    gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.loc.x, gameScreen.pc.loc.y);
     requestAnimationFrame(loop);
 }
 loop();
