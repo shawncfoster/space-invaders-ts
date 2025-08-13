@@ -13,6 +13,7 @@ interface imageList{
     deadSprite: string;
     cycle: number
 }
+
 const setUpFeatures: Features = {
     squareWidth: 100,
     squareHeight: 50,
@@ -23,6 +24,7 @@ const setUpFeatures: Features = {
     bgColor: "black"
 }
 
+
 type Status = "alive" | "dead";
 
 interface CoordSpeed {
@@ -30,31 +32,53 @@ interface CoordSpeed {
     y: number
 }
 
+class Shape{
+    height: number;
+    width: number;
+    position: CoordSpeed;
+    speed: CoordSpeed;
+    stat: Status;
+    
+    constructor(height:number = 100, width: number = 100, position: CoordSpeed = {x:0, y:0},
+        speed:CoordSpeed = {x: 1, y: 1}, stat: Status = "dead"){
+        this.height = height;
+        this.width = width;
+        this.position = position;
+        this.speed = speed;
+        this.stat = stat;
+    }
+
+     move(coord: CoordSpeed) :void {
+        this.position.x = coord.x;
+        this.position.y = coord.y;
+    }
+}
+
 class Sprite{
-    loc: CoordSpeed;
+    position: CoordSpeed;
     imgSource: string;
     img;
     imgList: imageList;
-    status: Status;
+    stat: Status;
 
-    constructor(loc: CoordSpeed, imgSource: string, 
+    constructor(position: CoordSpeed, imgSource: string, 
         imgList: imageList = {images:[], deadSprite:"", cycle: 0},
-        status: Status = "alive"){
-        this.loc = loc;
+        stat: Status = "dead"){
+        this.position = position;
         this.imgSource = imgSource;
         this.img = new Image();
         this.img.src = imgSource;
         this.imgList = imgList;
-        this.status = status;
+        this.stat = stat;
     }
 
     move(coord: CoordSpeed) :void {
-        this.loc.x = coord.x;
-        this.loc.y = coord.y;
+        this.position.x = coord.x;
+        this.position.y = coord.y;
     }
 
     animate(): void{
-        if(this.status != "dead"){
+        if(this.stat != "dead"){
             if(this.imgList.cycle < this.imgList.images.length){
                 this.imgList.cycle += 1;
             }else{
@@ -69,8 +93,8 @@ class Sprite{
 }
 
 class Alien extends Sprite{
-    constructor(loc: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
-        super(loc, imgSource);
+    constructor(position: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
+        super(position, imgSource);
         this.img = new Image();
         this.img.src = imgSource;
         this.imgList = imgList;
@@ -78,17 +102,15 @@ class Alien extends Sprite{
 }
 
 class PlayerCharacter extends Sprite{
-    constructor(loc: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
-        super(loc, imgSource);
+    constructor(position: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
+        super(position, imgSource);
         this.img = new Image();
         this.img.src = imgSource;
         this.imgList = imgList;
     }
-
     shoot(){
-        
-    }
 
+    }
 }
 
 class Screen {
@@ -99,9 +121,11 @@ class Screen {
     startPoint: CoordSpeed;
     setUp: Features;
     offSet: CoordSpeed;
-    //good place to use destructuring?
-    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, 
-        startPoint: CoordSpeed = {x:0, y:0}, offSet: CoordSpeed = {x:200, y:0}, setUp:Features = setUpFeatures
+    speed: CoordSpeed
+    bullet: Shape;
+    //feel like I'm just recreating global scope using one big class that contains everything.
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, startPoint = {x:0, y:0},
+         offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:100, y: 1} 
     ){
         this.swarm = swarm; 
         this.cnv = cnv;
@@ -110,32 +134,76 @@ class Screen {
         this.startPoint = startPoint;
         this.offSet = offSet;
         this.setUp = setUp;
+        this.bullet = new Shape(100, 10, {x: 0, y: 0}, {x: 1, y: 100});
+        this.speed = speed;
     }
 
-    drawSwarm(blinkStart= 5, blinkDur= 50, speed = 1){
-    let {x, y} = this.startPoint;
-    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-            for(let i = 0; i < this.swarm.length; i++){
+    initSwarm(){
+        let {x, y} = this.startPoint;
+        for(let i = 0; i < this.swarm.length; i++){
                 x = this.startPoint.x;
                 for(let j = 0; j < this.swarm[i].length; j++){
+                    this.swarm[i][j].move({x:x,y:y})//MUST remember to move at initialization
                     this.cnv.drawImage(this.swarm[i][j].img, x, y);
                     x += this.offSet.x;
-                    if(x >= (canvas.width - (this.offSet.x)) || x <= (- this.offSet.x)){
-                        this.startPoint.y += 100
-                        this.offSet.x *= -1;
-                        this.startPoint.x = x + this.offSet.x;
-                }
             }
-                y += 150;
+                y += this.offSet.y;
+        }
+    }
+
+    updateSwarm(blinkStart= 5, blinkDur= 500){
+    //let {x, y} = this.startPoint;
+    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+            for(let i = 0; i < this.swarm.length; i++){
+                for(let j = 0; j < this.swarm[i].length; j++){
+                    let alien = this.swarm[i][j];
+                    let {x, y} = alien.position;
+                    alien.move({x: x + this.speed.x, y:y});//why is this appo the same for every sprite?
+                    //this.swarm[i][j].move({x: this.swarm[i][j].position.x + this.speed.x, y: this.swarm[i][j].position.y})
+                    //x += this.offSet.x;
+                    if(alien.position.x >= (canvas.width) || alien.position.x <= (0)){
+                        this.swarm.forEach(element => {
+                            element.forEach(z => {
+                                z.move({x:z.position.x, y: z.position.y + this.speed.y});
+                            });
+                        });
+                        //.move({x:this.swarm[i][j].position.x, y: this.swarm[i][j].position.y + this.speed.y})
+                        this.speed.x *= -1;
+                        //this.startPoint.x = x + this.offSet.x;
+                }
+                //this.cnv.drawImage(this.swarm[i][j].img, this.swarm[i][j].position.x, this.swarm[i][j].position.y);
+                this.cnv.drawImage(alien.img, x, y);
+            }
+                //y += 150;
         }
     //this.startPoint.y +=150;    
     this.swarmTimer += 1;
     }else if(this.swarmTimer > (blinkStart + blinkDur)){
         this.swarmTimer = 0;
-        this.startPoint.x += this.offSet.x * speed
+        //this.startPoint.x += this.offSet.x * speed
     }
     this.swarmTimer += 1
 }
+    shoot(){
+        if(this.bullet.stat === "dead"){
+            this.bullet.position = {x: this.pc.position.x, y: this.pc.position.y + this.bullet.height};
+            this.bullet.stat = "alive";
+        }
+    }
+
+    updateBullet(){
+        if(this.bullet.stat === "alive"){
+           this.cnv.fillStyle = "white";
+           this.cnv.fillRect(this.bullet.position.x,this.bullet.position.y , this.bullet.width, this.bullet.height);
+           this.bullet.move({x: this.bullet.position.x, y: this.bullet.position.y - this.bullet.speed.y})
+           this.cnv.fillStyle = "black";
+        }
+        if(this.bullet.position.y <=0){
+            // this.bullet.position.x = this.pc.position.x;
+            // this.bullet.position.x = this.pc.position.y;
+            this.bullet.stat = "dead";
+        }
+    }
 }
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;; 
 const ctx  = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -156,6 +224,11 @@ const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
 const tank = new PlayerCharacter({x: 1, y:canvas.height - 120},"tank_big.png");
 const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
 const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
+//
+// const swarm1: Alien[] = [];
+// for(let i = 0; i < 11; i++){
+    
+// }
 const invaderSwarm: Alien[][] = [closedSwarm, openSwarm];
 
 const gameScreen = new Screen(invaderSwarm, ctx, tank);
@@ -164,26 +237,30 @@ const gameScreen = new Screen(invaderSwarm, ctx, tank);
     window.addEventListener("keydown", (e) => {
             switch (e.key) {
               case "a":
-                    if(gameScreen.pc.loc.x > 100){
-                        gameScreen.pc.move({x:gameScreen.pc.loc.x - 100, y:gameScreen.pc.loc.y});
+                    if(gameScreen.pc.position.x > 100){
+                        gameScreen.pc.move({x:gameScreen.pc.position.x - 100, y:gameScreen.pc.position.y});
                     }
                     break;
               case "d":
-                    if(gameScreen.pc.loc.x < canvas.width - 100){
-                        gameScreen.pc.move({x:gameScreen.pc.loc.x + 100, y: gameScreen.pc.loc.y});
+                    if(gameScreen.pc.position.x < canvas.width - 100){
+                        gameScreen.pc.move({x:gameScreen.pc.position.x + 100, y: gameScreen.pc.position.y});
                     }
                 break;
-            case "Space":
-                gameScreen.pc.shoot();
+            case "w":
+                gameScreen.shoot();
                 break;
                 
             }
         })
 
+
+gameScreen.initSwarm();
 function loop() :void {
     ctx.fillRect(0,0, canvas.width, canvas.height);
-    gameScreen.drawSwarm();
-    gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.loc.x, gameScreen.pc.loc.y);
+    gameScreen.initSwarm();
+    gameScreen.updateSwarm();
+    gameScreen.updateBullet();
+    gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
     requestAnimationFrame(loop);
 }
 loop();
