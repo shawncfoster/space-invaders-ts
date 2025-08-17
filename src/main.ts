@@ -151,16 +151,16 @@ class Screen {
         }
     }
 
-    updateSwarm(blinkStart= 5, blinkDur= 500){
+    updateSwarm(blinkStart= 5, blinkDur= 50){
     //let {x, y} = this.startPoint;
     if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
             for(let i = 0; i < this.swarm.length; i++){
                 for(let j = 0; j < this.swarm[i].length; j++){
                     let alien = this.swarm[i][j];
                     let {x, y} = alien.position;
-                    alien.move({x: x + this.speed.x, y:y});//why is this appo the same for every sprite?
+                    alien.move({x: alien.position.x + this.speed.x, y:alien.position.y});//why is this appo the same for every sprite?
                     //this.swarm[i][j].move({x: this.swarm[i][j].position.x + this.speed.x, y: this.swarm[i][j].position.y})
-                    //x += this.offSet.x;
+                    //x += this.offSet.x;i
                     if(alien.position.x >= (canvas.width) || alien.position.x <= (0)){
                         this.swarm.forEach(element => {
                             element.forEach(z => {
@@ -219,17 +219,19 @@ const invaderOpen = new Image();
 invader.src = "gimp_alien_thick.png";
 invaderOpen.src = "gimp_alien_open.png";
 
-const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png");
-const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
+//const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png");
+//const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
 const tank = new PlayerCharacter({x: 1, y:canvas.height - 120},"tank_big.png");
-const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
-const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
+//const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
+//const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
+const openSwarmArray: Alien[] = Array(11).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
+const closedSwarmArray: Alien[] = Array(11).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
 //
 // const swarm1: Alien[] = [];
 // for(let i = 0; i < 11; i++){
     
 // }
-const invaderSwarm: Alien[][] = [closedSwarm, openSwarm];
+const invaderSwarm: Alien[][] = [closedSwarmArray, openSwarmArray];
 
 const gameScreen = new Screen(invaderSwarm, ctx, tank);
 
@@ -253,16 +255,30 @@ const gameScreen = new Screen(invaderSwarm, ctx, tank);
             }
         })
 
+let isPlaying: boolean = true;
 
 gameScreen.initSwarm();
 function loop() :void {
-    ctx.fillRect(0,0, canvas.width, canvas.height);
-    gameScreen.initSwarm();
+    if(isPlaying == true)
+    {ctx.fillRect(0,0, canvas.width, canvas.height);
+    //gameScreen.initSwarm();
     gameScreen.updateSwarm();
     gameScreen.updateBullet();
     gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
     requestAnimationFrame(loop);
 }
+}
+window.addEventListener('keydown', function (e){
+    if (e.key === "Escape"){
+        if(isPlaying){
+            isPlaying = false;
+
+        }else{
+            isPlaying = true;
+            loop()
+        }
+    }
+})
 loop();
 // invader.addEventListener("load", () => {ctx.drawImage(invader, 0, 0)})
 // invaderOpen.addEventListener("load", () => {ctx.drawImage(invaderOpen, 150, 0)})
