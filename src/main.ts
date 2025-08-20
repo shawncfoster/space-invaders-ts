@@ -90,6 +90,11 @@ class Sprite{
             this.img.src = this.imgList.deadSprite;
         }
     }
+
+    translate(xdirection:number, ydirection:number): void{
+        this.position.x += xdirection;
+        this.position.y +=ydirection;
+    }
 }
 
 class Alien extends Sprite{
@@ -137,7 +142,7 @@ class Screen {
         this.bullet = new Shape(100, 10, {x: 0, y: 0}, {x: 1, y: 100});
         this.speed = speed;
     }
-
+//this part works. Why doesn't update?
     initSwarm(){
         let {x, y} = this.startPoint;
         for(let i = 0; i < this.swarm.length; i++){
@@ -151,16 +156,17 @@ class Screen {
         }
     }
 
-    updateSwarm(blinkStart= 5, blinkDur= 50){
+    updateSwarm(blinkStart= 5, blinkDur= 25){
     //let {x, y} = this.startPoint;
     if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
             for(let i = 0; i < this.swarm.length; i++){
                 for(let j = 0; j < this.swarm[i].length; j++){
                     let alien = this.swarm[i][j];
-                    let {x, y} = alien.position;
-                    alien.move({x: alien.position.x + this.speed.x, y:alien.position.y});//why is this appo the same for every sprite?
+                    //let {x, y} = alien.position;
+                    alien.translate(this.speed.x, 0);
+                    //alien.move({x: alien.position.x + this.speed.x, y:alien.position.y});//why is this appo the same for every sprite?
                     //this.swarm[i][j].move({x: this.swarm[i][j].position.x + this.speed.x, y: this.swarm[i][j].position.y})
-                    //x += this.offSet.x;i
+                    //x += this.offSet.x;i`
                     if(alien.position.x >= (canvas.width) || alien.position.x <= (0)){
                         this.swarm.forEach(element => {
                             element.forEach(z => {
@@ -172,7 +178,7 @@ class Screen {
                         //this.startPoint.x = x + this.offSet.x;
                 }
                 //this.cnv.drawImage(this.swarm[i][j].img, this.swarm[i][j].position.x, this.swarm[i][j].position.y);
-                this.cnv.drawImage(alien.img, x, y);
+                this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
             }
                 //y += 150;
         }
