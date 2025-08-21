@@ -126,11 +126,13 @@ class Screen {
     startPoint: CoordSpeed;
     setUp: Features;
     offSet: CoordSpeed;
-    speed: CoordSpeed
+    baseSpeed: CoordSpeed;
+    negativeSpeed: CoordSpeed;
+    positiveSpeed: CoordSpeed;
     bullet: Shape;
     //feel like I'm just recreating global scope using one big class that contains everything.
     constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, startPoint = {x:0, y:0},
-         offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:10, y: 10} 
+         offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:100, y: 10} 
     ){
         this.swarm = swarm; 
         this.cnv = cnv;
@@ -140,9 +142,11 @@ class Screen {
         this.offSet = offSet;
         this.setUp = setUp;
         this.bullet = new Shape(100, 10, {x: 0, y: 0}, {x: 1, y: 100});
-        this.speed = speed;
+        this.baseSpeed = speed;
+        this.positiveSpeed = {x:speed.x, y:speed.y};
+        this.negativeSpeed = {x:-speed.x, y:-speed.y}
     }
-//this part works. Why doesn't update?
+
     initSwarm(){
         let {x, y} = this.startPoint;
         for(let i = 0; i < this.swarm.length; i++){
@@ -155,72 +159,58 @@ class Screen {
                 y += this.offSet.y;
         }
     }
-
+    //lesson: You probably don't need to squeeze every drop of performance 
+    //to make an arcade game from 1978 in a 2025 browser 
     updateSwarm(blinkStart= 5, blinkDur= 25){
-    //let {x, y} = this.startPoint;
-    if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-            for(let i = 0; i < this.swarm.length; i++){
-                for(let j = 0; j < this.swarm[i].length; j++){
-                    let alien = this.swarm[i][j];
-                    //let {x, y} = alien.position;
-                    alien.translate(this.speed.x, 0);
-                    //alien.move({x: alien.position.x + this.speed.x, y:alien.position.y});//why is this appo the same for every sprite?
-                    //this.swarm[i][j].move({x: this.swarm[i][j].position.x + this.speed.x, y: this.swarm[i][j].position.y})
-                    //x += this.offSet.x;i`
-                    if(alien.position.x >= (canvas.width) || alien.position.x <= (0)){
-                        this.swarm.forEach(element => {
-                            element.forEach(z => {
-                                z.move({x:z.position.x, y: z.position.y + this.speed.y});
-                            });
-                        });
-                        //.move({x:this.swarm[i][j].position.x, y: this.swarm[i][j].position.y + this.speed.y})
-                        this.speed.x *= -1;
-                        //this.startPoint.x = x + this.offSet.x;
-                }
-                //this.cnv.drawImage(this.swarm[i][j].img, this.swarm[i][j].position.x, this.swarm[i][j].position.y);
-                this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
-            }
-                //y += 150;
+        this.baseSpeed.y = 0;
+            if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+                this.swarm.forEach( row => 
+                    {this.checkPosition(row);
+                        row.forEach(alien => {
+                        this.cnv.drawImage(alien.img, alien.position.x, alien.position.y)})})
+                this.swarmTimer +=1
         }
-    //this.startPoint.y +=150;    
-    this.swarmTimer += 1;
-    }else if(this.swarmTimer > (blinkStart + blinkDur)){
-        this.swarmTimer = 0;
-        //this.startPoint.x += this.offSet.x * speed
+            else if(this.swarmTimer > (blinkStart + blinkDur)){
+                    this.swarm.forEach( row => 
+                    {this.checkPosition(row);
+                        row.forEach(alien => {
+                        alien.translate(this.baseSpeed.x, this.baseSpeed.y)})})
+                this.swarmTimer = 0;
     }
-    this.swarmTimer += 1
+    this.baseSpeed.y = 0;
+    this.swarmTimer += 1;
 }
 //there's a way I can fix my trouble here
 //giving up and hardcoding is the way to go
     checkPosition(aliens: Sprite[]){
         if(aliens[0].position.x < 0){
-                this.speed.x = 10;
-                this.speed.y = 10;
-                //row.forEach(alien =>{alien.translate(this.speed.x, this.speed.y)})
+                this.baseSpeed.x = this.positiveSpeed.x;
+                this.baseSpeed.y = 10;
             }
             if(aliens[aliens.length - 1].position.x >= canvas.width){
-                this.speed.x = -10;
-                this.speed.y = 10;
-                //row.forEach(alien =>{alien.translate(this.speed.x, this.speed.y)})
+                this.baseSpeed.x = this.negativeSpeed.x;
+                this.baseSpeed.y = 10;
             }
     }
-    //lesson: You probably don't need to squeeze every drop of performance to make an arcade game 
     updateSwarmTwo(blinkStart= 5, blinkDur = 50){
         if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-            this.speed.y = 0;
-            for (let row of this.swarm){
-                this.checkPosition(row);
-                for(let alien of row){
-                    alien.translate(this.speed.x, this.speed.y);
-                    this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
-                }
+            this.baseSpeed.y = 0;
+        for (let row of this.swarm){
+            this.checkPosition(row);
+            for(let alien of row){
+                if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+                this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
             }
-            this.speed.y = 0;
-            this.swarmTimer += 1;
-        }else if(this.swarmTimer > (blinkStart + blinkDur)){
-            this.swarmTimer = 0;
-            //this.startPoint.x += this.offSet.x * speed
-        }
+                else if(this.swarmTimer > (blinkStart + blinkDur)){
+                alien.translate(this.baseSpeed.x, this.baseSpeed.y);
+            }
+        }}
+        this.baseSpeed.y = 0;
+        this.swarmTimer += 1;
+    }else if(this.swarmTimer > (blinkStart + blinkDur)){
+        this.swarmTimer = 0;
+        //this.startPoint.x += this.offSet.x * speed
+    }
     this.swarmTimer += 1
     }
     shoot(){
@@ -302,7 +292,7 @@ function loop() :void {
     if(isPlaying == true)
     {ctx.fillRect(0,0, canvas.width, canvas.height);
     //gameScreen.initSwarm();
-    gameScreen.updateSwarmTwo();
+    gameScreen.updateSwarm();
     gameScreen.updateBullet();
     gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
     requestAnimationFrame(loop);
