@@ -130,7 +130,7 @@ class Screen {
     bullet: Shape;
     //feel like I'm just recreating global scope using one big class that contains everything.
     constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, startPoint = {x:0, y:0},
-         offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:100, y: 1} 
+         offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:10, y: 10} 
     ){
         this.swarm = swarm; 
         this.cnv = cnv;
@@ -190,6 +190,39 @@ class Screen {
     }
     this.swarmTimer += 1
 }
+//there's a way I can fix my trouble here
+//giving up and hardcoding is the way to go
+    checkPosition(aliens: Sprite[]){
+        if(aliens[0].position.x < 0){
+                this.speed.x = 10;
+                this.speed.y = 10;
+                //row.forEach(alien =>{alien.translate(this.speed.x, this.speed.y)})
+            }
+            if(aliens[aliens.length - 1].position.x >= canvas.width){
+                this.speed.x = -10;
+                this.speed.y = 10;
+                //row.forEach(alien =>{alien.translate(this.speed.x, this.speed.y)})
+            }
+    }
+    //lesson: You probably don't need to squeeze every drop of performance to make an arcade game 
+    updateSwarmTwo(blinkStart= 5, blinkDur = 50){
+        if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
+            this.speed.y = 0;
+            for (let row of this.swarm){
+                this.checkPosition(row);
+                for(let alien of row){
+                    alien.translate(this.speed.x, this.speed.y);
+                    this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
+                }
+            }
+            this.speed.y = 0;
+            this.swarmTimer += 1;
+        }else if(this.swarmTimer > (blinkStart + blinkDur)){
+            this.swarmTimer = 0;
+            //this.startPoint.x += this.offSet.x * speed
+        }
+    this.swarmTimer += 1
+    }
     shoot(){
         if(this.bullet.stat === "dead"){
             this.bullet.position = {x: this.pc.position.x, y: this.pc.position.y + this.bullet.height};
@@ -230,14 +263,15 @@ invaderOpen.src = "gimp_alien_open.png";
 const tank = new PlayerCharacter({x: 1, y:canvas.height - 120},"tank_big.png");
 //const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
 //const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
-const openSwarmArray: Alien[] = Array(11).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
+const openSwarmArray: Alien[] = Array(3).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
 const closedSwarmArray: Alien[] = Array(11).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
+const closedSwarmArrayTwo: Alien[] = Array(11).fill(0).map(() => new Alien({x:0, y:0},"gimp_alien_thick.png"))
 //
 // const swarm1: Alien[] = [];
 // for(let i = 0; i < 11; i++){
     
 // }
-const invaderSwarm: Alien[][] = [closedSwarmArray, openSwarmArray];
+const invaderSwarm: Alien[][] = [closedSwarmArray, openSwarmArray, closedSwarmArrayTwo];
 
 const gameScreen = new Screen(invaderSwarm, ctx, tank);
 
@@ -268,7 +302,7 @@ function loop() :void {
     if(isPlaying == true)
     {ctx.fillRect(0,0, canvas.width, canvas.height);
     //gameScreen.initSwarm();
-    gameScreen.updateSwarm();
+    gameScreen.updateSwarmTwo();
     gameScreen.updateBullet();
     gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
     requestAnimationFrame(loop);
