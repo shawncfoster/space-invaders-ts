@@ -52,6 +52,11 @@ class Shape{
         this.position.x = coord.x;
         this.position.y = coord.y;
     }
+
+    translate(xdirection:number, ydirection:number): void{
+        this.position.x += xdirection;
+        this.position.y +=ydirection;
+    }
 }
 
 class Sprite{
@@ -60,6 +65,7 @@ class Sprite{
     img;
     imgList: imageList;
     stat: Status;
+    bullet: Shape;
 
     constructor(position: CoordSpeed, imgSource: string, 
         imgList: imageList = {images:["gimp_alien_open.png", "gimp_alien_thick.png"], deadSprite:"gimp_alien_blank.png", cycle:0},
@@ -70,6 +76,7 @@ class Sprite{
         this.img.src = imgSource;
         this.imgList = imgList;
         this.stat = stat;
+        this.bullet = new Shape(100, 10, {x: this.position.x, y: this.position.y}, {x: 1, y: 50})
     }
 
     move(coord: CoordSpeed) :void {
@@ -94,21 +101,10 @@ class Sprite{
     }
 }
 
-class PlayerCharacter extends Sprite{
-    constructor(position: CoordSpeed, imgSource: string, imgList: imageList = {images:[], deadSprite:"", cycle:0}){
-        super(position, imgSource);
-        this.img = new Image();
-        this.img.src = imgSource;
-        this.imgList = imgList;
-    }
-    shoot(){
-
-    }
-}
 
 class Screen {
     swarm: Sprite[][];
-    pc: PlayerCharacter;
+    pc: Sprite;
     swarmTimer: number
     cnv: CanvasRenderingContext2D
     startPoint: CoordSpeed;
@@ -119,7 +115,7 @@ class Screen {
     positiveSpeed: CoordSpeed;
     bullet: Shape;
     //feel like I'm just recreating global scope using one big class that contains everything.
-    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: PlayerCharacter, startPoint = {x:0, y:50},
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite, startPoint = {x:0, y:50},
          offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:100, y: 50} 
     ){
         this.swarm = swarm; 
@@ -129,7 +125,7 @@ class Screen {
         this.startPoint = startPoint;
         this.offSet = offSet;
         this.setUp = setUp;
-        this.bullet = new Shape(100, 10, {x: 0, y: 0}, {x: 1, y: 100});
+        this.bullet = new Shape(100, 10, {x: 0, y: 0}, {x: 1, y: -100});
         this.baseSpeed = speed;
         this.positiveSpeed = {x:speed.x, y:speed.y};
         this.negativeSpeed = {x:-speed.x, y:-speed.y}
@@ -156,14 +152,18 @@ class Screen {
                         this.checkPosition(row);
                         this.checkDeathArray(row);//it loops through the array AGAIN every time I call this though :/
                         row.forEach(alien => {
-                            this.cnv.drawImage(alien.img, alien.position.x, alien.position.y)})})
+                            this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
+                            this.alienShoot(alien);
+                            this.updateBullet(alien.bullet, {x: alien.position.x, y: alien.position.y})
+                        })})
+
                 this.swarmTimer +=1
         }
             else if(this.swarmTimer > (blinkStart + blinkDur)){
                     this.swarm.forEach( row => 
                     {this.checkPosition(row);
                         row.forEach(alien => {
-                            this.checkDeath(alien);
+                            //this.checkDeath(alien);
                             //alien.animate();
                             //for whatever reason putting this in THIS PARTICULAR FUNCTION breaks the image
                             alien.translate(this.baseSpeed.x, this.baseSpeed.y)})})
@@ -175,7 +175,6 @@ class Screen {
 
 //there's a way I can fix my trouble here
 //giving up and hardcoding is the way to go
-//currently seems to glitch whenever one row is shot completely...
     checkPosition(aliens: Sprite[]){
         if(aliens.length > 0){
             if(aliens[0].position.x < 0){
@@ -196,21 +195,21 @@ class Screen {
         }
     }
 
-    checkDeath(alien: Sprite){
-        //figure an object will at least make things more readable than a MASSIVE hairy boolean
-        let contained = {
-            right: this.bullet.position.x <= (alien.position.x + (0.5 * alien.img.width)),
-            left: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.width)),
-            up:  this.bullet.position.y <= (alien.position.y + (0.5 * alien.img.height)),
-            down: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.height)),
-         }
+    // checkDeath(alien: Sprite){
+    //     //figure an object will at least make things more readable than a MASSIVE hairy boolean
+    //     let contained = {
+    //         right: this.bullet.position.x <= (alien.position.x + (0.5 * alien.img.width)),
+    //         left: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.width)),
+    //         up:  this.bullet.position.y <= (alien.position.y + (0.5 * alien.img.height)),
+    //         down: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.height)),
+    //      }
 
-        if((contained.right && contained.left) && (contained.up && contained.down)){
-            alien.stat = "dead";
-            alien.img.src = alien.imgList.deadSprite;
-            this.bullet.stat = "dead";
-        }
-    }
+    //     if((contained.right && contained.left) && (contained.up && contained.down)){
+    //         alien.stat = "dead";
+    //         alien.img.src = alien.imgList.deadSprite;
+    //         this.bullet.stat = "dead";
+    //     }
+    // }
 
     checkDeathArray(Sprites: Sprite[]){
         for (let i = 0; i< Sprites.length; i++){
@@ -230,8 +229,15 @@ class Screen {
         Sprites = Sprites.filter(x => x.stat !== "dead");// why is it it doesn't modify when I WANT it to?
         } 
     
-
+// /Math.floor(Math.random() * (max - (min) + 1)) + min
         
+    }
+
+    alienShoot(alien:Sprite, probability = 1000){
+        //should be able to do it just by having an array of bullets with position equal to aliens and turning them on/off?
+        if(((Math.floor(Math.random() * (probability - (1) + 1)) + 1) == 1) && alien.stat === "alive"){
+            alien.bullet.stat = "alive"
+        }
     }
 
     shoot(){
@@ -241,19 +247,20 @@ class Screen {
         }
     }
 
-    updateBullet(){
-        if(this.bullet.stat === "alive"){
+    updateBullet(projectile: Shape = this.bullet, 
+        startPosition: CoordSpeed = {x: this.pc.position.x, y: this.pc.position.y}){
+        if(projectile.stat === "alive"){
            this.cnv.fillStyle = "white";
-           this.cnv.fillRect(this.bullet.position.x,this.bullet.position.y , this.bullet.width, this.bullet.height);
-           this.bullet.move({x: this.bullet.position.x, y: this.bullet.position.y - this.bullet.speed.y})
+           this.cnv.fillRect(projectile.position.x, projectile.position.y, projectile.width, projectile.height);
+           projectile.translate(projectile.speed.x, projectile.speed.y)
            this.cnv.fillStyle = "black";
         }
-        if(this.bullet.position.y <=0){
-            this.bullet.stat = "dead";
+        if(projectile.position.y <=0 || projectile.position.y >= canvas.height){
+            projectile.stat = "dead";
         }
-        if(this.bullet.stat == "dead"){
-            this.bullet.position.x = this.pc.position.x;
-            this.bullet.position.y = this.pc.position.y;
+        if(projectile.stat == "dead"){
+            projectile.position.x = startPosition.x;
+            projectile.position.y = startPosition.y;
         }
     }
 }
@@ -274,7 +281,7 @@ const invaderSprites: string[] = ["gimp_alien_thick.png","gimp_alien_open.png"]
 
 //const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png");
 //const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
-const tank = new PlayerCharacter({x: 1, y:canvas.height - 120},"tank_big.png");
+const tank = new Sprite({x: 1, y:canvas.height - 120},"tank_big.png");
 //const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
 //const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
 const openSwarmArray: Sprite[] = Array(3).fill(0).map(() => new Sprite({x:0, y:25},"gimp_alien_thick.png"))
@@ -317,7 +324,7 @@ function loop() :void {
     {ctx.fillRect(0,0, canvas.width, canvas.height);
     //gameScreen.initSwarm();
     gameScreen.updateSwarm();
-    gameScreen.updateBullet();
+    gameScreen.updateBullet(gameScreen.bullet);
     gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
     requestAnimationFrame(loop);
 }
