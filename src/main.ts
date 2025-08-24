@@ -66,8 +66,10 @@ class Sprite{
     imgList: imageList;
     stat: Status;
     bullet: Shape;
+    score: number;
+    lives: number;
 
-    constructor(position: CoordSpeed, imgSource: string, 
+    constructor(position: CoordSpeed, imgSource: string, score: number = 100,
         imgList: imageList = {images:["gimp_alien_open.png", "gimp_alien_thick.png"], deadSprite:"gimp_alien_blank.png", cycle:0},
         stat: Status = "alive"){
         this.position = position;
@@ -76,7 +78,9 @@ class Sprite{
         this.img.src = imgSource;
         this.imgList = imgList;
         this.stat = stat;
-        this.bullet = new Shape(100, 10, {x: this.position.x, y: this.position.y}, {x: 1, y: 50})
+        this.bullet = new Shape(100, 10, {x: this.position.x, y: this.position.y}, {x: 0, y: 25})
+        this.score = score;
+        this.lives = 3;
     }
 
     move(coord: CoordSpeed) :void {
@@ -115,7 +119,7 @@ class Screen {
     positiveSpeed: CoordSpeed;
     bullet: Shape;
     //feel like I'm just recreating global scope using one big class that contains everything.
-    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite, startPoint = {x:0, y:50},
+    constructor(swarm: Sprite[][], cnv: CanvasRenderingContext2D, pc: Sprite, startPoint = {x:0, y:200},
          offSet = {x:200, y:200}, setUp: Features = setUpFeatures, speed = {x:100, y: 50} 
     ){
         this.swarm = swarm; 
@@ -148,14 +152,31 @@ class Screen {
     updateSwarm(blinkStart= 5, blinkDur= 50){
         this.baseSpeed.y = 0;
             if(this.swarmTimer >= blinkStart && (this.swarmTimer <= blinkStart + blinkDur)){
-                this.swarm.forEach(row => {
-                        this.checkPosition(row);
-                        this.checkDeathArray(row);//it loops through the array AGAIN every time I call this though :/
-                        row.forEach(alien => {
-                            this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
-                            this.alienShoot(alien);
-                            this.updateBullet(alien.bullet, {x: alien.position.x, y: alien.position.y})
-                        })})
+                for(let row of this.swarm){
+                     this.checkPosition(row);
+                     this.checkDeathArray(row);
+                     for (let alien of row){
+                        this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
+                        this.alienShoot(alien);
+                        this.updateBullet(alien.bullet, {x: alien.position.x, y: alien.position.y});
+                        if(alien.bullet.stat ==="alive"){
+                            if(this.checkCollision(alien.bullet, this.pc)){
+                                this.pc.lives -= 1;
+                                alien.bullet.stat = "dead";
+                            }
+                        }
+                        
+                     }
+                }
+                // this.swarm.forEach(row => {
+                //         this.checkPosition(row);
+                //         this.checkDeathArray(row);//it loops through the array AGAIN every time I call this though :/
+                //         row.forEach(alien => {
+                //             this.cnv.drawImage(alien.img, alien.position.x, alien.position.y);
+                //             this.alienShoot(alien);
+                //             this.updateBullet(alien.bullet, {x: alien.position.x, y: alien.position.y});
+                //             if(this.checkCollision(alien.bullet, this.pc)){this.pc.lives -= 1}
+                //         })})
 
                 this.swarmTimer +=1
         }
@@ -195,36 +216,32 @@ class Screen {
         }
     }
 
-    // checkDeath(alien: Sprite){
-    //     //figure an object will at least make things more readable than a MASSIVE hairy boolean
-    //     let contained = {
-    //         right: this.bullet.position.x <= (alien.position.x + (0.5 * alien.img.width)),
-    //         left: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.width)),
-    //         up:  this.bullet.position.y <= (alien.position.y + (0.5 * alien.img.height)),
-    //         down: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.height)),
-    //      }
-
-    //     if((contained.right && contained.left) && (contained.up && contained.down)){
-    //         alien.stat = "dead";
-    //         alien.img.src = alien.imgList.deadSprite;
-    //         this.bullet.stat = "dead";
-    //     }
-    // }
-
+    checkCollision(object1: Sprite | Shape, object2: Sprite){
+        let contained = {
+            right: object1.position.x <= (object2.position.x + (0.5 * object2.img.width)),
+            left: object1.position.x >= (object2.position.x - (0.5 * object2.img.width)),
+            up:  object1.position.y <= (object2.position.y + (0.5 * object2.img.height)),
+            down: object1.position.y >= (object2.position.y - (0.5 * object2.img.height)),
+         }
+         let collided = (contained.right && contained.left) && (contained.up && contained.down);
+         return collided; 
+        
+    }
+    //this could be a fun place to work with generics in the future, make it work for shapes and SPRITES.
     checkDeathArray(Sprites: Sprite[]){
         for (let i = 0; i< Sprites.length; i++){
             let alien = Sprites[i];
-            let contained = {
-            right: this.bullet.position.x <= (alien.position.x + (0.5 * alien.img.width)),
-            left: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.width)),
-            up:  this.bullet.position.y <= (alien.position.y + (0.5 * alien.img.height)),
-            down: this.bullet.position.x >= (alien.position.x - (0.5 * alien.img.height)),
-         }
          
-         if((contained.right && contained.left) && (contained.up && contained.down)){
+         if(this.checkCollision(this.bullet, alien)){
             alien.stat = "dead";
-            alien.img.src = alien.imgList.deadSprite;
             this.bullet.stat = "dead";
+            //I can have a little code duplication, as a treat
+            this.bullet.position.x = this.pc.position.x
+            this.bullet.position.y = this.pc.position.y
+            alien.img.src = alien.imgList.deadSprite;
+            this.pc.score += alien.score;
+            this.positiveSpeed.x += 1;
+            this.negativeSpeed.x -= 1;
         }
         Sprites = Sprites.filter(x => x.stat !== "dead");// why is it it doesn't modify when I WANT it to?
         } 
@@ -263,6 +280,16 @@ class Screen {
             projectile.position.y = startPosition.y;
         }
     }
+
+    displayInfo(){
+        this.cnv.font = "124px sans-serif"
+        this.cnv.fillStyle = "#39FF14"
+        this.cnv.fillText(`Score: ${this.pc.score}`, 100, 100)
+        this.cnv.fillText(`Lives: ${this.pc.lives}`, 2100, 100)
+        this.cnv.fillText(`Level`, 3800, 100)
+        this.cnv.fillStyle = "black"
+
+    }
 }
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;; 
 const ctx  = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -281,18 +308,21 @@ const invaderSprites: string[] = ["gimp_alien_thick.png","gimp_alien_open.png"]
 
 //const closedInvader = new Alien({x:0, y:0},"gimp_alien_thick.png");
 //const openInvader = new Alien({x:0, y:0},"gimp_alien_open.png");
-const tank = new Sprite({x: 1, y:canvas.height - 120},"tank_big.png");
+const tank = new Sprite({x: 1, y:canvas.height - 120},"tank_big.png",0);
 //const closedSwarm: Alien[]= Array.from({length: 11}, () => (closedInvader));
 //const openSwarm: Alien[]= Array.from({length: 11}, () => (openInvader));
-const openSwarmArray: Sprite[] = Array(3).fill(0).map(() => new Sprite({x:0, y:25},"gimp_alien_thick.png"))
-const closedSwarmArray: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:25},"gimp_alien_thick.png"))
-const closedSwarmArrayTwo: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:25},"gimp_alien_thick.png"))
+const openSwarmArray: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:100},"gimp_alien_thick.png"))
+const closedSwarmArray: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:100},"gimp_alien_thick.png"))
+const closedSwarmArrayTwo: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:100},"gimp_alien_thick.png"))
+const closedSwarmArrayThree: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:100},"gimp_alien_thick.png"))
+const closedSwarmArrayFour: Sprite[] = Array(11).fill(0).map(() => new Sprite({x:0, y:100},"gimp_alien_thick.png"))
+
 //
 // const swarm1: Alien[] = [];
 // for(let i = 0; i < 11; i++){
     
 // }
-const invaderSwarm: Sprite[][] = [closedSwarmArray, openSwarmArray, closedSwarmArrayTwo];
+const invaderSwarm: Sprite[][] = [closedSwarmArray, openSwarmArray, closedSwarmArrayTwo, closedSwarmArrayThree, closedSwarmArrayFour];
 
 const gameScreen = new Screen(invaderSwarm, ctx, tank);
 
@@ -326,6 +356,7 @@ function loop() :void {
     gameScreen.updateSwarm();
     gameScreen.updateBullet(gameScreen.bullet);
     gameScreen.cnv.drawImage(gameScreen.pc.img, gameScreen.pc.position.x, gameScreen.pc.position.y);
+    gameScreen.displayInfo();
     requestAnimationFrame(loop);
 }
 }
